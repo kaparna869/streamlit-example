@@ -10,10 +10,15 @@ import plotly.graph_objects as go
 import datetime
 
 """
-# Welcome to JPN-SEN-Analysis
-
-Upload the required `JPN-Data.csv` file to get started 
+# SEMANTIC ANALYSIS FOR SNS JAPAN
+Please select the twitter handle for analysis 
 """
+#Upload the required `JPN-Data.csv` file to get started 
+
+tweet_station = st.selectbox(
+    "Select Twitter Handle",
+    ["Toyota Motorcorp", "Yo Sushi Restaurant", "Nobu Restaurant", "7-11 Store"]
+)
 
 model = keras.models.load_model('my_model.keras')
 today = datetime.datetime.now()
@@ -24,7 +29,7 @@ dec_31 = datetime.date(next_year, 12, 31)
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 date_range_option = st.selectbox(
     "Select Date Range",
-    ["1 hour", "1 day", "1 week", "1 month", "1 year", "Custom"]
+    ["1 hour", "1 day", "1 week", "1 month", "Custom"]
 )
 
 if date_range_option == "Custom":
@@ -38,6 +43,8 @@ if date_range_option == "Custom":
     )
     d
 
+
+
 st.title("Analysis Zone")
 
 if uploaded_file is not None:
@@ -50,7 +57,7 @@ if uploaded_file is not None:
     else:
         # Perform sentiment analysis
         x = df['Japanese']
-
+       
         # Preprocess the text (similar to what you did during training)
         max_len = 1000
         tok = Tokenizer(num_words=1500)
@@ -70,15 +77,41 @@ if uploaded_file is not None:
         neutral_count = sentiment_labels.count(2)
 
         # Calculate percentages
-        negative_percentage = (negative_count / total_samples) * 100
+        negative_percentage = ((negative_count / total_samples) * 100)
         positive_percentage = (positive_count / total_samples) * 100
         neutral_percentage = (neutral_count / total_samples) * 100
 
+        negative_percentage= round(negative_percentage, 2)
+        positive_percentage= round(positive_percentage,2)
+        neutral_percentage= round(neutral_percentage,2)
+
         # Display sentiment statistics as cards
         st.subheader("Sentiment Analysis Results")
+        
+        # Custom CSS to style the tabs
+        custom_css = """
+        <style>
+/* Define background color for tabs */
+div.stTabs > div > div > div {
+    background-color: #90EE90;
+}
+
+/* Define tab text color */
+div.stTabs > div > div > div > div > div {
+    color: white;
+}
+
+/* Define background color for active tab */
+div.stTabs > div > div > div > div > div[data-bk-widget-type="Tabs"][data-bk-tabs-active] {
+    background-color: #0056b3 !important;
+}
+</style>
+"""
+
+        st.markdown(custom_css, unsafe_allow_html=True)
 
         col1, col2, col3 = st.columns(3)
-
+        
         with col1:
             st.metric("Negative", negative_count)
             st.metric("Negative %", negative_percentage)
@@ -139,16 +172,41 @@ if uploaded_file is not None:
             st.plotly_chart(fig_bar, use_container_width=True)  # Display Pie Chart 2
 
         # Display top 5 tweets with random data (replace with actual data)
-        st.subheader("Top 5 Tweets")
+        st.subheader("Detailed Reports on Tweets")
         tweets_data = [['56431', '雅子様のセンスですかね', 'Positive'],
                ['879398', '私ら庶民の母親にはできないスカート丈(お嬢様かお姫様丈)', 'Netural'],
                ['8831573', 'やっぱり皇太子(天皇)より皇太子妃(皇后)のほうがデカいって見栄え最悪だな　ノミの夫婦', 'Negative'],
                ['76347', '食べ物はそれほど悪くありませんでした', 'Positive'],
                ['387863', '浪川大輔さんから頂いた！！', 'Netural']]
+        # Create a layout object for the sidebar
+        #layout = st.layout.sidebar.create_layout(page_icon=":home:")
 
         # Convert the list of lists to a DataFrame
-        df_tweets = pd.DataFrame(tweets_data, columns=["ID", "Tweets", "Sentiment Mode"])
-        st.dataframe(df_tweets)
+        tab1, tab2, tab3 = st.tabs(["Happy", "Sad", "Neutral"])
+       # tab_colors = ["green","red", "#99ffcc"]
+        with tab1:
+            filtered_tweets = df[df['Senti'] == "Positive"]
+            if "Unnamed: 0" in filtered_tweets.columns:
+                filtered_tweets = filtered_tweets.drop(columns=["Unnamed: 0", "Unnamed: 0.1"])
+            # Convert the list of lists to a DataFrame
+            st.dataframe(filtered_tweets, height=550)
+        with tab2:
+            filtered_tweets = df[df['Senti'] == "Negative"]
+            if "Unnamed: 0" in filtered_tweets.columns:
+                filtered_tweets = filtered_tweets.drop(columns=["Unnamed: 0", "Unnamed: 0.1"])
+                # Convert the list of lists to a DataFrame
+            st.dataframe(filtered_tweets, height=550)
+        with tab3:
+            filtered_tweets = df[df['Senti'] == "Neutral"]
+            if "Unnamed: 0" in filtered_tweets.columns:
+                filtered_tweets = filtered_tweets.drop(columns=["Unnamed: 0", "Unnamed: 0.1"])
+            # Convert the list of lists to a DataFrame
+            st.dataframe(filtered_tweets, height=550)
+
+        # Remove the "Unnamed: 0" and "Unnamed: 0.1" columns
 
 else:
     st.text("Upload the file to display result!")
+
+# # Footer
+# st.footer("Made by Harsh in Streamlit")
