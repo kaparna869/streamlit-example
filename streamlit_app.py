@@ -9,11 +9,27 @@ import plotly.express as px
 import plotly.graph_objects as go
 import datetime
 
+# Define CSS styles for tab colors
+tab_styles = """
+<style>
+    div[data-baseweb="tab"] {
+        background-color: lightgray;
+    }
+    div[data-baseweb="tab"][aria-selected="true"] {
+        background-color: green;  /* Green for Happy */
+    }
+</style>
+"""
+
+# Apply CSS styles
+st.markdown(tab_styles, unsafe_allow_html=True)
+
 """
 # SEMANTIC ANALYSIS FOR SNS JAPAN
 Please select the twitter handle for analysis 
 """
-#Upload the required `JPN-Data.csv` file to get started 
+
+# Upload the required JPN-Data.csv file to get started 
 
 tweet_station = st.selectbox(
     "Select Twitter Handle",
@@ -43,8 +59,6 @@ if date_range_option == "Custom":
     )
     d
 
-
-
 st.title("Analysis Zone")
 
 if uploaded_file is not None:
@@ -70,6 +84,22 @@ if uploaded_file is not None:
         predictions = model.predict(sequences_matrix)
         sentiment_labels = np.argmax(predictions, axis=1).tolist()
 
+        # Create a new DataFrame with sentiment labels and Japanese texts
+        sentiment_df = pd.DataFrame({
+            'Senti': sentiment_labels,
+            'Japanese': df['Japanese']
+        })
+
+        # Create a function to find the English translation
+        def find_english_translation(japanese_text):
+            for index, row in df.iterrows():
+                if row['Japanese'] == japanese_text:
+                    return row['eng']
+            return ''
+
+        # Apply the function to get English translations
+        sentiment_df['English'] = sentiment_df['Japanese'].apply(find_english_translation)
+
         # Calculate sentiment statistics
         total_samples = len(sentiment_labels)
         negative_count = sentiment_labels.count(0)
@@ -77,38 +107,12 @@ if uploaded_file is not None:
         neutral_count = sentiment_labels.count(2)
 
         # Calculate percentages
-        negative_percentage = ((negative_count / total_samples) * 100)
-        positive_percentage = (positive_count / total_samples) * 100
-        neutral_percentage = (neutral_count / total_samples) * 100
-
-        negative_percentage= round(negative_percentage, 2)
-        positive_percentage= round(positive_percentage,2)
-        neutral_percentage= round(neutral_percentage,2)
+        negative_percentage = round((negative_count / total_samples) * 100, 2)
+        positive_percentage = round((positive_count / total_samples) * 100, 2)
+        neutral_percentage = round((neutral_count / total_samples) * 100, 2)
 
         # Display sentiment statistics as cards
         st.subheader("Sentiment Analysis Results")
-        
-        # Custom CSS to style the tabs
-        custom_css = """
-        <style>
-/* Define background color for tabs */
-div.stTabs > div > div > div {
-    background-color: #90EE90;
-}
-
-/* Define tab text color */
-div.stTabs > div > div > div > div > div {
-    color: white;
-}
-
-/* Define background color for active tab */
-div.stTabs > div > div > div > div > div[data-bk-widget-type="Tabs"][data-bk-tabs-active] {
-    background-color: #0056b3 !important;
-}
-</style>
-"""
-
-        st.markdown(custom_css, unsafe_allow_html=True)
 
         col1, col2, col3 = st.columns(3)
         
@@ -171,42 +175,38 @@ div.stTabs > div > div > div > div > div[data-bk-widget-type="Tabs"][data-bk-tab
         with col2:
             st.plotly_chart(fig_bar, use_container_width=True)  # Display Pie Chart 2
 
-        # Display top 5 tweets with random data (replace with actual data)
+        # Display top 5 tweets with sentiment and English text
         st.subheader("Detailed Reports on Tweets")
-        tweets_data = [['56431', '雅子様のセンスですかね', 'Positive'],
-               ['879398', '私ら庶民の母親にはできないスカート丈(お嬢様かお姫様丈)', 'Netural'],
-               ['8831573', 'やっぱり皇太子(天皇)より皇太子妃(皇后)のほうがデカいって見栄え最悪だな　ノミの夫婦', 'Negative'],
-               ['76347', '食べ物はそれほど悪くありませんでした', 'Positive'],
-               ['387863', '浪川大輔さんから頂いた！！', 'Netural']]
-        # Create a layout object for the sidebar
-        #layout = st.layout.sidebar.create_layout(page_icon=":home:")
-
-        # Convert the list of lists to a DataFrame
         tab1, tab2, tab3 = st.tabs(["Happy", "Sad", "Neutral"])
-       # tab_colors = ["green","red", "#99ffcc"]
+
         with tab1:
-            filtered_tweets = df[df['Senti'] == "Positive"]
+            filtered_tweets = sentiment_df[sentiment_df['Senti'] == 1]
             if "Unnamed: 0" in filtered_tweets.columns:
                 filtered_tweets = filtered_tweets.drop(columns=["Unnamed: 0", "Unnamed: 0.1"])
-            # Convert the list of lists to a DataFrame
+            # Rename the first column to "Tweet_Id"
+            filtered_tweets.index.names = ['Twt-ID']
             st.dataframe(filtered_tweets, height=550)
+
         with tab2:
-            filtered_tweets = df[df['Senti'] == "Negative"]
+            filtered_tweets = sentiment_df[sentiment_df['Senti'] == 0]
             if "Unnamed: 0" in filtered_tweets.columns:
                 filtered_tweets = filtered_tweets.drop(columns=["Unnamed: 0", "Unnamed: 0.1"])
-                # Convert the list of lists to a DataFrame
+            # Rename the first column to "Tweet_Id"
+            filtered_tweets.index.names = ['Twt-ID']
             st.dataframe(filtered_tweets, height=550)
+
         with tab3:
-            filtered_tweets = df[df['Senti'] == "Neutral"]
+            filtered_tweets = sentiment_df[sentiment_df['Senti'] == 2]
             if "Unnamed: 0" in filtered_tweets.columns:
                 filtered_tweets = filtered_tweets.drop(columns=["Unnamed: 0", "Unnamed: 0.1"])
-            # Convert the list of lists to a DataFrame
+            # Rename the first column to "Tweet_Id"
+            filtered_tweets.index.names = ['Twt-ID']
             st.dataframe(filtered_tweets, height=550)
 
         # Remove the "Unnamed: 0" and "Unnamed: 0.1" columns
 
 else:
-    st.text("Upload the file to display result!")
+    st.text("Upload the file to display the results!")
 
 # # Footer
-# st.footer("Made by Harsh in Streamlit")
+# st.footer("Made by Harsh in Streamlit")
